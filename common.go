@@ -53,14 +53,21 @@ func Deletar(nomeDB string, nomeColecao string, client *mongo.Client, insertedID
 	log.Println(a, b)
 }
 
-func Atualizar(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}, campoAtualizado interface{}) {
+func AtualizarPeloId(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}, campoAtualizado interface{}) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
 	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
 	filtro := bson.M{"_id": insertedID}
 	log.Println(filtro)
 	a, b := collection.UpdateOne(context.TODO(), filtro, atualizacao)
 	log.Println(a, b)
+}
 
+func Atualizar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}, campoAtualizado interface{}) {
+	collection := client.Database(nomeDB).Collection(nomeColecao)
+	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
+	log.Println(filtro)
+	a, b := collection.UpdateOne(context.TODO(), filtro, atualizacao)
+	log.Println(a, b)
 }
 
 func Adicionar(ctx context.Context, nomeDB string, nomeColecao string, documento interface{}, client *mongo.Client) interface{} {
