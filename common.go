@@ -11,99 +11,112 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func RetornarCliente(url string) *mongo.Client {
-	clientOptions := options.Client().ApplyURI("mongodb://" + url)
-	client, err := mongo.NewClient(clientOptions)
-	if err != nil {
-		log.Fatal(err)
+func RetornarCliente(url string) (*mongo.Client, error) {
+	clientOptions := options.Client().ApplyURI("mongodb://" + url).SetConnectTimeout(10 * time.Second)
+	client, erro := mongo.NewClient(clientOptions)
+	if erro != nil {
+		log.Fatal(erro)
+		return nil, erro
 	}
-	err = client.Connect(context.Background())
-	if err != nil {
-		log.Fatal(err)
+	erro = client.Connect(context.Background())
+	if erro != nil {
+		log.Fatal(erro)
+		return nil, erro
 	}
-	return client
+	return client, nil
 }
 
-func RetornarClienteSeguro(url string, authDB string, user string, password string, appName string) *mongo.Client {
+func RetornarClienteSeguro(url string, authDB string, user string, password string, appName string) (*mongo.Client, error) {
 	credentials := options.Credential{AuthSource: authDB, Username: user, Password: password}
 	connectionOptions := options.Client().ApplyURI("mongodb://" + url).SetAppName(appName).SetAuth(credentials).SetConnectTimeout(5 * time.Second)
-	client, err := mongo.NewClient(connectionOptions)
-	if err != nil {
-		log.Fatal("Erro ao efetuar conexão com o DB", err.Error())
-		return nil
+	client, erro := mongo.NewClient(connectionOptions)
+	if erro != nil {
+		log.Fatal("Erro ao efetuar conexão com o DB", erro.Error())
+		return nil, erro
 	}
-	err = client.Connect(context.Background())
-	if err != nil {
-		log.Fatal("Erro ao efetuar conexão com o DB", err.Error())
+	erro = client.Connect(context.Background())
+	if erro != nil {
+		log.Fatal("Erro ao efetuar conexão com o DB", erro.Error())
+		return nil, erro
 	}
-	return client
+	return client, nil
 }
 
-func Total(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}) int64 {
+func Total(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}) (int64, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
-	total, err := collection.CountDocuments(context.TODO(), filtro)
-	log.Println(total, err)
-	return total
+	total, erro := collection.CountDocuments(context.TODO(), filtro)
+	return total, erro
 }
 
-func Deletar(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}) {
+func DeletarPeloId(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}) (*mongo.DeleteResult, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
 	filtro := bson.M{"_id": insertedID}
-	a, b := collection.DeleteOne(context.TODO(), filtro)
-	log.Println(a, b)
+	deleteResult, erro := collection.DeleteOne(context.TODO(), filtro)
+	return deleteResult, erro
 }
 
-func AtualizarPeloId(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}, campoAtualizado interface{}) {
+func Deletar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}) (*mongo.DeleteResult, error) {
+	collection := client.Database(nomeDB).Collection(nomeColecao)
+	deleteResult, erro := collection.DeleteOne(context.TODO(), filtro)
+	return deleteResult, erro
+}
+
+func AtualizarPeloId(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}, campoAtualizado interface{}) (*mongo.UpdateResult, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
 	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
 	filtro := bson.M{"_id": insertedID}
-	log.Println(filtro)
-	a, b := collection.UpdateOne(context.TODO(), filtro, atualizacao)
-	log.Println(a, b)
+	updateResult, erro := collection.UpdateOne(context.TODO(), filtro, atualizacao)
+	return updateResult, erro
 }
 
-func Atualizar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}, campoAtualizado interface{}) {
+func Atualizar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}, campoAtualizado interface{}) (*mongo.UpdateResult, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
 	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
-	log.Println(filtro)
-	a, b := collection.UpdateOne(context.TODO(), filtro, atualizacao)
-	log.Println(a, b)
+	updateResult, erro := collection.UpdateOne(context.TODO(), filtro, atualizacao)
+	return updateResult, erro
 }
 
-func Adicionar(ctx context.Context, nomeDB string, nomeColecao string, documento interface{}, client *mongo.Client) interface{} {
+func Adicionar(ctx context.Context, nomeDB string, nomeColecao string, documento interface{}, client *mongo.Client) (*mongo.InsertOneResult, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
 	c := context.TODO()
-	a, b := collection.InsertOne(c, documento)
-	log.Println(a, b)
-	return a.InsertedID
+	insertOneResult, erro := collection.InsertOne(c, documento)
+	return insertOneResult, erro
 }
 
-func RetornarUm(nomeDB string, nomeColecao string, modelo interface{}, client *mongo.Client, filtro bson.M) {
+func AdicionarVarios(tx context.Context, nomeDB string, nomeColecao string, documentos []interface{}, client *mongo.Client) (*mongo.InsertManyResult, error) {
 	collection := client.Database(nomeDB).Collection(nomeColecao)
-	a := collection.FindOne(context.TODO(), filtro)
-	a.Decode(modelo)
+	insertManyResult, erro := collection.InsertMany(context.TODO(), documentos)
+	return insertManyResult, erro
+}
+
+func RetornarUm(nomeDB string, nomeColecao string, modelo interface{}, client *mongo.Client,
+	filtro bson.M, findOption *options.FindOneOptions) error {
+	collection := client.Database(nomeDB).Collection(nomeColecao)
+	a := collection.FindOne(context.TODO(), filtro, findOption)
+	erro := a.Decode(modelo)
+	return erro
 }
 
 func RetornarTodos(ctx context.Context, nomeDB string,
-	nomeColecao string, modelo interface{}, client *mongo.Client, filtro bson.M) interface{} {
+	nomeColecao string, modelo interface{}, client *mongo.Client, filtro bson.M) (interface{}, error) {
 
 	collection := client.Database(nomeDB).Collection(nomeColecao)
-	cur, err := collection.Find(context.TODO(), filtro)
-	if err != nil {
-		log.Println("Find cur", err)
+	cur, erro := collection.Find(context.TODO(), filtro)
+	if erro != nil {
+		return nil, erro
 	}
 	rv := reflect.ValueOf(modelo).Elem()
 	sv := rv.Slice(0, rv.Cap())
 
 	for cur.Next(context.Background()) {
 		pev := reflect.New(sv.Type().Elem())
-		if err := cur.Decode(pev.Interface()); err != nil {
-			return err
+		if erro := cur.Decode(pev.Interface()); erro != nil {
+			return nil, erro
 		}
 
 		sv = reflect.Append(sv, pev.Elem())
 	}
 
 	rv.Set(sv)
-	return cur.Err()
+	return cur.Err(), erro
 }
