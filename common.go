@@ -11,8 +11,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func RetornarCliente(url string) (*mongo.Client, error) {
+func RetornarCliente(url string, appName string) (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI("mongodb://" + url).SetConnectTimeout(10 * time.Second)
+	clientOptions.SetAppName(appName)
+	clientOptions.SetMaxConnIdleTime(15 * time.Second)
+	clientOptions.SetServerSelectionTimeout(10 * time.Second)
 	client, erro := mongo.NewClient(clientOptions)
 	if erro != nil {
 		log.Fatal(erro)
@@ -29,6 +32,8 @@ func RetornarCliente(url string) (*mongo.Client, error) {
 func RetornarClienteSeguro(url string, authDB string, user string, password string, appName string) (*mongo.Client, error) {
 	credentials := options.Credential{AuthSource: authDB, Username: user, Password: password}
 	connectionOptions := options.Client().ApplyURI("mongodb://" + url).SetAppName(appName).SetAuth(credentials).SetConnectTimeout(5 * time.Second)
+	connectionOptions.SetMaxConnIdleTime(15 * time.Second)
+	connectionOptions.SetServerSelectionTimeout(10 * time.Second)
 	client, erro := mongo.NewClient(connectionOptions)
 	if erro != nil {
 		log.Fatal("Erro ao efetuar conexão com o DB", erro.Error())
