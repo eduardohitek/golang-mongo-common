@@ -59,7 +59,7 @@ func (dbc *DBCommon) retornarClienteSeguro(url string, authDB string, user strin
 }
 
 func (dbc *DBCommon) retornarClienteSeguroMongoAtlas(url string, user string, password string, db string, appName string) (*mongo.Client, error) {
-	connectionURL := fmt.Sprintf("mongodb+srv://%s:%s@tu-8pfjk.mongodb.net/%s?retryWrites=true&w=majority", user, password, db)
+	connectionURL := fmt.Sprintf("mongodb+srv://%s:%s@%s/%s?retryWrites=true&w=majority", user, password, url, db)
 	connectionOptions := options.Client().ApplyURI(connectionURL)
 	connectionOptions.SetAppName(appName).SetConnectTimeout(10 * time.Second)
 	connectionOptions.SetMaxConnIdleTime(15 * time.Second)
