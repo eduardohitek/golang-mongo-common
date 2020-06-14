@@ -19,7 +19,8 @@ type DBCommon struct {
 
 //NewDBCommon constructor
 func NewDBCommon(log *log.Logger) *DBCommon {
-	return &DBCommon{Log: log}
+	ret := &DBCommon{Log: log}
+	return ret
 }
 
 func (dbc *DBCommon) retornarCliente(url string, appName string) (*mongo.Client, error) {
