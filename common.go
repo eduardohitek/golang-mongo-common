@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// Retorna um client para MongoDB sem efetuar autenticação.
 func RetornarCliente(url string, appName string) (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI("mongodb://" + url).SetConnectTimeout(10 * time.Second)
 	clientOptions.SetAppName(appName)
