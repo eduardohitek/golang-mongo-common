@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -12,12 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	shutdown()
-	os.Exit(code)
-}
+// func TestMain(m *testing.M) {
+// 	setup()
+// 	code := m.Run()
+// 	shutdown()
+// 	os.Exit(code)
+// }
 
 func Test_setClientOptions(t *testing.T) {
 	connectionURI := "mongodb://localhost"
