@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reflect"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,137 +11,177 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Retorna um client para MongoDB sem efetuar autenticação.
-func RetornarCliente(url string, appName string) (*mongo.Client, error) {
-	clientOptions := options.Client().ApplyURI("mongodb://" + url).SetConnectTimeout(10 * time.Second)
+const connectTimeout = 10 * time.Second
+const maxConnIdleTime = 15 * time.Second
+const serverSelectionTimeout = 10 * time.Second
+
+// Sets the default options for the Client.
+func setClientOptions(connectionURI string, appName string) *options.ClientOptions {
+	clientOptions := options.Client()
+	clientOptions.ApplyURI(connectionURI)
+	clientOptions.SetConnectTimeout(connectTimeout)
 	clientOptions.SetAppName(appName)
-	clientOptions.SetMaxConnIdleTime(15 * time.Second)
-	clientOptions.SetServerSelectionTimeout(10 * time.Second)
-	client, erro := mongo.NewClient(clientOptions)
-	if erro != nil {
-		log.Fatal("Erro ao criar o cliente de conexão com o DB", erro.Error())
-		return nil, erro
+	clientOptions.SetMaxConnIdleTime(maxConnIdleTime)
+	clientOptions.SetServerSelectionTimeout(serverSelectionTimeout)
+	return clientOptions
+}
+
+// Sets the default option for the Client with credentials
+func setClientOptionsWithCredentials(connectionURI string, appName string,
+	credentials options.Credential) *options.ClientOptions {
+
+	clientOptions := setClientOptions(connectionURI, appName)
+	clientOptions.SetAuth(credentials)
+	return clientOptions
+}
+
+// Returns a non-authenticated mongodb client.
+func ReturnClient(url string, appName string) (*mongo.Client, error) {
+	connectionURI := fmt.Sprintf("mongodb://%s", url)
+	clientOptions := setClientOptions(connectionURI, appName)
+	client, err := mongo.NewClient(clientOptions)
+	if err != nil {
+		log.Fatal("Error on creating the database client", err.Error())
+		return nil, err
 	}
-	erro = client.Connect(context.Background())
-	if erro != nil {
-		log.Fatal("Erro ao se conectar com o DB", erro.Error())
-		return nil, erro
+	err = client.Connect(context.TODO())
+	if err != nil {
+		log.Fatal("Error on connection to the database", err.Error())
+		return nil, err
 	}
 	return client, nil
 }
 
-func RetornarClienteSeguro(url string, authDB string, user string, password string, appName string) (*mongo.Client, error) {
+// Returns an authenticated mongodb client.
+func ReturnAuthenticatedClient(url string, authDB string, user string, password string,
+	appName string) (*mongo.Client, error) {
+
 	credentials := options.Credential{AuthSource: authDB, Username: user, Password: password}
-	connectionOptions := options.Client().ApplyURI("mongodb://" + url).SetAppName(appName).SetAuth(credentials).SetConnectTimeout(5 * time.Second)
-	connectionOptions.SetMaxConnIdleTime(15 * time.Second)
-	connectionOptions.SetServerSelectionTimeout(10 * time.Second)
-	client, erro := mongo.NewClient(connectionOptions)
-	if erro != nil {
-		log.Fatal("Erro ao criar o cliente de conexão com o DB", erro.Error())
-		return nil, erro
+	connectionURI := fmt.Sprintf("mongodb://%s", url)
+	clientOptions := setClientOptionsWithCredentials(connectionURI, appName, credentials)
+	client, err := mongo.NewClient(clientOptions)
+	if err != nil {
+		log.Fatal("Error on creating the database client", err.Error())
+		return nil, err
 	}
-	erro = client.Connect(context.Background())
-	if erro != nil {
-		log.Fatal("Erro ao se conectar com o DB", erro.Error())
-		return nil, erro
-	}
-	return client, nil
-}
-
-func RetornarClienteSeguroMongoAtlas(url string, user string, password string, db string, appName string) (*mongo.Client, error) {
-	connectionURL := fmt.Sprintf("mongodb+srv://%s:%s@%s/%s?retryWrites=true&w=majority", user, password, url, db)
-	connectionOptions := options.Client().ApplyURI(connectionURL)
-	connectionOptions.SetAppName(appName).SetConnectTimeout(10 * time.Second)
-	connectionOptions.SetMaxConnIdleTime(15 * time.Second)
-	connectionOptions.SetServerSelectionTimeout(10 * time.Second)
-	client, erro := mongo.NewClient(connectionOptions)
-	if erro != nil {
-		log.Fatal("Erro ao criar o cliente de conexão com o DB", erro.Error())
-		return nil, erro
-	}
-	erro = client.Connect(context.Background())
-	if erro != nil {
-		log.Fatal("Erro ao se conectar com o DB", erro.Error())
-		return nil, erro
+	err = client.Connect(context.TODO())
+	if err != nil {
+		log.Fatal("Error on connection to the database", err.Error())
+		return nil, err
 	}
 	return client, nil
 }
 
-func Total(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}) (int64, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	total, erro := collection.CountDocuments(context.TODO(), filtro)
-	return total, erro
-}
+// Return an autheticated mongodb client for Mongo Atlas
+func ReturnAuthenticatedClientMongoAtlas(url string, user string, password string, db string,
+	appName string) (*mongo.Client, error) {
 
-func DeletarPeloID(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}) (*mongo.DeleteResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	filtro := bson.M{"_id": insertedID}
-	deleteResult, erro := collection.DeleteOne(context.TODO(), filtro)
-	return deleteResult, erro
-}
-
-func Deletar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}) (*mongo.DeleteResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	deleteResult, erro := collection.DeleteOne(context.TODO(), filtro)
-	return deleteResult, erro
-}
-
-func AtualizarPeloID(nomeDB string, nomeColecao string, client *mongo.Client, insertedID interface{}, campoAtualizado interface{}) (*mongo.UpdateResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
-	filtro := bson.M{"_id": insertedID}
-	updateResult, erro := collection.UpdateOne(context.TODO(), filtro, atualizacao)
-	return updateResult, erro
-}
-
-func Atualizar(nomeDB string, nomeColecao string, client *mongo.Client, filtro interface{}, campoAtualizado interface{}) (*mongo.UpdateResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
-	updateResult, erro := collection.UpdateOne(context.TODO(), filtro, atualizacao)
-	return updateResult, erro
-}
-
-func Adicionar(ctx context.Context, nomeDB string, nomeColecao string, documento interface{}, client *mongo.Client) (*mongo.InsertOneResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	c := context.TODO()
-	insertOneResult, erro := collection.InsertOne(c, documento)
-	return insertOneResult, erro
-}
-
-func AdicionarVarios(tx context.Context, nomeDB string, nomeColecao string, documentos []interface{}, client *mongo.Client) (*mongo.InsertManyResult, error) {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	insertManyResult, erro := collection.InsertMany(context.TODO(), documentos)
-	return insertManyResult, erro
-}
-
-func RetornarUm(nomeDB string, nomeColecao string, modelo interface{}, client *mongo.Client,
-	filtro bson.M, findOption *options.FindOneOptions) error {
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	a := collection.FindOne(context.TODO(), filtro, findOption)
-	erro := a.Decode(modelo)
-	return erro
-}
-
-func RetornarTodos(ctx context.Context, nomeDB string,
-	nomeColecao string, modelo interface{}, client *mongo.Client, filtro bson.M) (interface{}, error) {
-
-	collection := client.Database(nomeDB).Collection(nomeColecao)
-	cur, erro := collection.Find(context.TODO(), filtro)
-	if erro != nil {
-		return nil, erro
+	connectionURI := fmt.Sprintf("mongodb+srv://%s:%s@%s/%s?retryWrites=true&w=majority", user, password, url, db)
+	clientOptions := setClientOptions(connectionURI, appName)
+	client, err := mongo.NewClient(clientOptions)
+	if err != nil {
+		log.Fatal("Error on creating the database client", err.Error())
+		return nil, err
 	}
-	rv := reflect.ValueOf(modelo).Elem()
-	sv := rv.Slice(0, rv.Cap())
+	err = client.Connect(context.TODO())
+	if err != nil {
+		log.Fatal("Error on connection to the database", err.Error())
+		return nil, err
+	}
+	return client, nil
+}
 
-	for cur.Next(context.Background()) {
-		pev := reflect.New(sv.Type().Elem())
-		if erro := cur.Decode(pev.Interface()); erro != nil {
-			return nil, erro
-		}
+// Returns the total number of documents in one collection
+func Total(client *mongo.Client, dbName string, collectionName string, filter bson.M) (int64, error) {
+	collection := client.Database(dbName).Collection(collectionName)
+	total, err := collection.CountDocuments(context.TODO(), filter)
+	return total, err
+}
 
-		sv = reflect.Append(sv, pev.Elem())
+// Deletes a document by the informed ID
+func DeleteOneByID(client *mongo.Client, dbName string, collectionName string,
+	insertedID interface{}) (*mongo.DeleteResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	filter := bson.M{"_id": insertedID}
+	deleteResult, err := collection.DeleteOne(context.TODO(), filter)
+	return deleteResult, err
+}
+
+// Deletes one document by the informed filter
+func DeleteOneByFilter(client *mongo.Client, dbName string, collectionName string,
+	filter bson.M) (*mongo.DeleteResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	deleteResult, err := collection.DeleteOne(context.TODO(), filter)
+	return deleteResult, err
+}
+
+// Deletes one or many document by the informed filter
+func DeleteManyByFilter(client *mongo.Client, dbName string, collectionName string,
+	filter bson.M) (*mongo.DeleteResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	deleteResult, err := collection.DeleteMany(context.TODO(), filter)
+	return deleteResult, err
+}
+
+func UpdateByID(client *mongo.Client, dbName string, collectionName string, insertedID interface{},
+	campoAtualizado interface{}) (*mongo.UpdateResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
+	filter := bson.M{"_id": insertedID}
+	updateResult, err := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	return updateResult, err
+}
+
+func UpdateByFilter(client *mongo.Client, dbName string, collectionName string, filter bson.M,
+	campoAtualizado interface{}) (*mongo.UpdateResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
+	updateResult, err := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	return updateResult, err
+}
+
+func InsertOne(client *mongo.Client, dbName string, collectionName string,
+	model interface{}) (*mongo.InsertOneResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	insertResult, err := collection.InsertOne(context.TODO(), model)
+	return insertResult, err
+}
+
+func InsertMany(client *mongo.Client, dbName string, collectionName string,
+	models []interface{}) (*mongo.InsertManyResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	insertResult, err := collection.InsertMany(context.TODO(), models)
+	return insertResult, err
+}
+
+func FindOne(client *mongo.Client, dbName string, collectionName string, model interface{},
+	filter bson.M, findOption *options.FindOneOptions) (interface{}, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	a := collection.FindOne(context.TODO(), filter, findOption)
+	err := a.Decode(model)
+	return model, err
+}
+
+func FindAll(client *mongo.Client, dbName string, collectionName string, model interface{},
+	filter bson.M) (interface{}, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	cur, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	err = cur.All(context.TODO(), &model)
+	if err != nil {
+		return nil, err
 	}
 
-	rv.Set(sv)
-	return cur.Err(), erro
+	return model, err
 }
