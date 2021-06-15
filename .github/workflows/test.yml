@@ -24,4 +24,4 @@ jobs:
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
 
-      - run: go test
+      - run: go test -v --cover

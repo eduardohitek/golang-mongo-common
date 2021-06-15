@@ -11,18 +11,18 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const connectTimeout = 10 * time.Second
-const maxConnIdleTime = 15 * time.Second
-const serverSelectionTimeout = 10 * time.Second
+const ConnectTimeout = 10 * time.Second
+const MaxConnIdleTime = 15 * time.Second
+const ServerSelectionTimeout = 10 * time.Second
 
 // Sets the default options for the Client.
 func setClientOptions(connectionURI string, appName string) *options.ClientOptions {
 	clientOptions := options.Client()
 	clientOptions.ApplyURI(connectionURI)
-	clientOptions.SetConnectTimeout(connectTimeout)
+	clientOptions.SetConnectTimeout(ConnectTimeout)
 	clientOptions.SetAppName(appName)
-	clientOptions.SetMaxConnIdleTime(maxConnIdleTime)
-	clientOptions.SetServerSelectionTimeout(serverSelectionTimeout)
+	clientOptions.SetMaxConnIdleTime(MaxConnIdleTime)
+	clientOptions.SetServerSelectionTimeout(ServerSelectionTimeout)
 	return clientOptions
 }
 
@@ -41,12 +41,12 @@ func ReturnClient(url string, appName string) (*mongo.Client, error) {
 	clientOptions := setClientOptions(connectionURI, appName)
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
-		log.Fatal("Error on creating the database client", err.Error())
+		log.Fatal("Error on creating the database client. ", err.Error())
 		return nil, err
 	}
 	err = client.Connect(context.TODO())
 	if err != nil {
-		log.Fatal("Error on connection to the database", err.Error())
+		log.Fatal("Error on connection to the database. ", err.Error())
 		return nil, err
 	}
 	return client, nil
