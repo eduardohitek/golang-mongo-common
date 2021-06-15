@@ -14,10 +14,10 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v2
 
-      - name: Use Golang ${{ matrix.node-version }}
+      - name: Use Golang ${{ matrix.go-version }}
         uses: actions/setup-go@v1
         with:
-          node-version: ${{ matrix.node-version }}
+          go-version: ${{ matrix.go-version }}
 
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.6.0
