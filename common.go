@@ -126,25 +126,38 @@ func DeleteManyByFilter(client *mongo.Client, dbName string, collectionName stri
 	return deleteResult, err
 }
 
+// Update a document by the provided ID
 func UpdateByID(client *mongo.Client, dbName string, collectionName string, insertedID interface{},
-	campoAtualizado interface{}) (*mongo.UpdateResult, error) {
+	updatedField interface{}) (*mongo.UpdateResult, error) {
 
 	collection := client.Database(dbName).Collection(collectionName)
-	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
+	update := bson.D{{Key: "$set", Value: updatedField}}
 	filter := bson.M{"_id": insertedID}
-	updateResult, err := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
 	return updateResult, err
 }
 
-func UpdateByFilter(client *mongo.Client, dbName string, collectionName string, filter bson.M,
-	campoAtualizado interface{}) (*mongo.UpdateResult, error) {
+// Update one document by the provided filter
+func UpdateOneByFilter(client *mongo.Client, dbName string, collectionName string, filter bson.M,
+	updatedField interface{}) (*mongo.UpdateResult, error) {
 
 	collection := client.Database(dbName).Collection(collectionName)
-	atualizacao := bson.D{{Key: "$set", Value: campoAtualizado}}
-	updateResult, err := collection.UpdateOne(context.TODO(), filter, atualizacao)
+	update := bson.D{{Key: "$set", Value: updatedField}}
+	updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
 	return updateResult, err
 }
 
+// Update one or more documents by the provided filter
+func UpdateManyByFilter(client *mongo.Client, dbName string, collectionName string, filter bson.M,
+	updatedField interface{}) (*mongo.UpdateResult, error) {
+
+	collection := client.Database(dbName).Collection(collectionName)
+	update := bson.D{{Key: "$set", Value: updatedField}}
+	updateResult, err := collection.UpdateMany(context.TODO(), filter, update)
+	return updateResult, err
+}
+
+// Insert one document
 func InsertOne(client *mongo.Client, dbName string, collectionName string,
 	model interface{}) (*mongo.InsertOneResult, error) {
 
@@ -153,6 +166,7 @@ func InsertOne(client *mongo.Client, dbName string, collectionName string,
 	return insertResult, err
 }
 
+// Insert many documents
 func InsertMany(client *mongo.Client, dbName string, collectionName string,
 	models []interface{}) (*mongo.InsertManyResult, error) {
 
@@ -161,15 +175,17 @@ func InsertMany(client *mongo.Client, dbName string, collectionName string,
 	return insertResult, err
 }
 
+// Find one document by the provided filter
 func FindOne(client *mongo.Client, dbName string, collectionName string, model interface{},
 	filter bson.M, findOption *options.FindOneOptions) (interface{}, error) {
 
 	collection := client.Database(dbName).Collection(collectionName)
-	a := collection.FindOne(context.TODO(), filter, findOption)
-	err := a.Decode(model)
+	findResult := collection.FindOne(context.TODO(), filter, findOption)
+	err := findResult.Decode(model)
 	return model, err
 }
 
+// Find one or more documents by the provided filter
 func FindAll(client *mongo.Client, dbName string, collectionName string, model interface{},
 	filter bson.M) (interface{}, error) {
 
