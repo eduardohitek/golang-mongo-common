@@ -1,6 +1,11 @@
 # Golang Mongo Common
 
-Métodos Genéricos para o MongoDB em Go.
+![GitHub repo size](https://img.shields.io/github/repo-size/eduardohitek/golang-mongo-common)
+![GitHub Repo stars](https://img.shields.io/github/stars/eduardohitek/golang-mongo-common)
+![GitHub issues](https://img.shields.io/github/issues/eduardohitek/golang-mongo-common)
+
+
+> Provide some Helpers functions for MongoDB use with Golang.
 
 ## ⚠️ License
 
