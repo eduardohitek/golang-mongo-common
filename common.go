@@ -201,3 +201,18 @@ func FindAll(client *mongo.Client, dbName string, collectionName string, model i
 
 	return model, err
 }
+
+// Create an index with the provide name and condition
+func CreateIndex(client *mongo.Client, dbName string, collectionName string, field string, unique bool) error {
+	index := mongo.IndexModel{
+		Keys:    bson.M{field: 1}, // index in ascending order or -1 for descending order
+		Options: options.Index().SetUnique(unique),
+	}
+
+	collection := client.Database(dbName).Collection(collectionName)
+	_, err := collection.Indexes().CreateOne(context.TODO(), index)
+	if err != nil {
+		return err
+	}
+	return nil
+}
