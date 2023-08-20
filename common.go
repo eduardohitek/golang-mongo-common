@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -16,35 +17,40 @@ const MaxConnIdleTime = 15 * time.Second
 const ServerSelectionTimeout = 10 * time.Second
 
 // Sets the default options for the Client.
-func setClientOptions(connectionURI string, appName string) *options.ClientOptions {
+func setClientOptions(connectionURI string, appName string, createMonitor bool) *options.ClientOptions {
 	clientOptions := options.Client()
 	clientOptions.ApplyURI(connectionURI)
 	clientOptions.SetConnectTimeout(ConnectTimeout)
 	clientOptions.SetAppName(appName)
 	clientOptions.SetMaxConnIdleTime(MaxConnIdleTime)
 	clientOptions.SetServerSelectionTimeout(ServerSelectionTimeout)
+	if createMonitor {
+		monitor := &event.CommandMonitor{
+			Started: func(_ context.Context, e *event.CommandStartedEvent) {
+				if e.CommandName != "endSessions" {
+					log.Println(e.Command)
+				}
+			},
+		}
+		clientOptions.SetMonitor(monitor)
+	}
 	return clientOptions
 }
 
 // Sets the default option for the Client with credentials
 func setClientOptionsWithCredentials(connectionURI string, appName string,
-	credentials options.Credential) *options.ClientOptions {
+	credentials options.Credential, createMonitor bool) *options.ClientOptions {
 
-	clientOptions := setClientOptions(connectionURI, appName)
+	clientOptions := setClientOptions(connectionURI, appName, createMonitor)
 	clientOptions.SetAuth(credentials)
 	return clientOptions
 }
 
 // Returns a non-authenticated mongodb client.
-func ReturnClient(url string, appName string) (*mongo.Client, error) {
+func ReturnClient(url string, appName string, createMonitor bool) (*mongo.Client, error) {
 	connectionURI := fmt.Sprintf("mongodb://%s", url)
-	clientOptions := setClientOptions(connectionURI, appName)
-	client, err := mongo.NewClient(clientOptions)
-	if err != nil {
-		log.Fatal("Error on creating the database client. ", err.Error())
-		return nil, err
-	}
-	err = client.Connect(context.TODO())
+	clientOptions := setClientOptions(connectionURI, appName, createMonitor)
+	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal("Error on connection to the database. ", err.Error())
 		return nil, err
@@ -54,19 +60,14 @@ func ReturnClient(url string, appName string) (*mongo.Client, error) {
 
 // Returns an authenticated mongodb client.
 func ReturnAuthenticatedClient(url string, authDB string, user string, password string,
-	appName string) (*mongo.Client, error) {
+	appName string, createMonitor bool) (*mongo.Client, error) {
 
 	credentials := options.Credential{AuthSource: authDB, Username: user, Password: password}
 	connectionURI := fmt.Sprintf("mongodb://%s", url)
-	clientOptions := setClientOptionsWithCredentials(connectionURI, appName, credentials)
-	client, err := mongo.NewClient(clientOptions)
+	clientOptions := setClientOptionsWithCredentials(connectionURI, appName, credentials, createMonitor)
+	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		log.Fatal("Error on creating the database client", err.Error())
-		return nil, err
-	}
-	err = client.Connect(context.TODO())
-	if err != nil {
-		log.Fatal("Error on connection to the database", err.Error())
+		log.Fatal("Error on connection to the database. ", err.Error())
 		return nil, err
 	}
 	return client, nil
@@ -74,18 +75,13 @@ func ReturnAuthenticatedClient(url string, authDB string, user string, password 
 
 // Return an autheticated mongodb client for Mongo Atlas
 func ReturnAuthenticatedClientMongoAtlas(url string, user string, password string, db string,
-	appName string) (*mongo.Client, error) {
+	appName string, createMonitor bool) (*mongo.Client, error) {
 
 	connectionURI := fmt.Sprintf("mongodb+srv://%s:%s@%s/%s?retryWrites=true&w=majority", user, password, url, db)
-	clientOptions := setClientOptions(connectionURI, appName)
-	client, err := mongo.NewClient(clientOptions)
+	clientOptions := setClientOptions(connectionURI, appName, createMonitor)
+	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
-		log.Fatal("Error on creating the database client", err.Error())
-		return nil, err
-	}
-	err = client.Connect(context.TODO())
-	if err != nil {
-		log.Fatal("Error on connection to the database", err.Error())
+		log.Fatal("Error on connection to the database. ", err.Error())
 		return nil, err
 	}
 	return client, nil
