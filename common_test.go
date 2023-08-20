@@ -21,7 +21,7 @@ import (
 func Test_setClientOptions(t *testing.T) {
 	connectionURI := "mongodb://localhost"
 	appName := "common-test"
-	client := setClientOptions(connectionURI, appName)
+	client := setClientOptions(connectionURI, appName, true)
 	assert.Equal(t, appName, *client.AppName)
 	assert.Equal(t, ConnectTimeout, *client.ConnectTimeout)
 	assert.Equal(t, MaxConnIdleTime, *client.MaxConnIdleTime)
@@ -36,7 +36,7 @@ func Test_setClientOptionsWithCredentials(t *testing.T) {
 	userDB := "user"
 	passDB := "password"
 	credentials := options.Credential{AuthSource: authDB, Username: userDB, Password: passDB}
-	client := setClientOptionsWithCredentials(connectionURI, appName, credentials)
+	client := setClientOptionsWithCredentials(connectionURI, appName, credentials, true)
 	assert.Equal(t, appName, *client.AppName)
 	assert.Equal(t, ConnectTimeout, *client.ConnectTimeout)
 	assert.Equal(t, MaxConnIdleTime, *client.MaxConnIdleTime)
@@ -50,7 +50,7 @@ func Test_setClientOptionsWithCredentials(t *testing.T) {
 func Test_returnClient(t *testing.T) {
 	connectionURI := "localhost"
 	appName := "common-test"
-	client, err := ReturnClient(connectionURI, appName)
+	client, err := ReturnClient(connectionURI, appName, true)
 	assert.Nil(t, err, "should be nil")
 	assert.NotNil(t, client, "should not be nil")
 	err = client.Ping(context.TODO(), nil)
@@ -73,6 +73,6 @@ func Test_InsertOne(t *testing.T) {
 }
 
 func getClient(connectionURI string, appName string) *mongo.Client {
-	client, _ := ReturnClient(connectionURI, appName)
+	client, _ := ReturnClient(connectionURI, appName, true)
 	return client
 }
