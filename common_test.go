@@ -72,6 +72,37 @@ func Test_InsertOne(t *testing.T) {
 
 }
 
+func Test_CreateIndex(t *testing.T) {
+	client := getClient("localhost", "common-test")
+	dbName := "test"
+	collectionName := "test_create_index"
+	field := "email"
+	collection := client.Database(dbName).Collection(collectionName)
+	defer collection.Drop(context.TODO())
+
+	err := CreateIndex(client, dbName, collectionName, field, true)
+	assert.Nil(t, err, "should be nil")
+
+	cursor, err := collection.Indexes().List(context.TODO())
+	assert.Nil(t, err, "should be nil")
+
+	var indexes []bson.M
+	err = cursor.All(context.TODO(), &indexes)
+	assert.Nil(t, err, "should be nil")
+
+	var found bson.M
+	for _, idx := range indexes {
+		if keys, ok := idx["key"].(bson.M); ok {
+			if _, exists := keys[field]; exists {
+				found = idx
+				break
+			}
+		}
+	}
+	assert.NotNil(t, found, "index on field should exist")
+	assert.Equal(t, true, found["unique"])
+}
+
 func getClient(connectionURI string, appName string) *mongo.Client {
 	client, _ := ReturnClient(connectionURI, appName, true)
 	return client
